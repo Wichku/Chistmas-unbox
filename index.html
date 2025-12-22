@@ -681,7 +681,7 @@
                                                                         onClick={() => isPlayMode ? handleCreatorTileClick(page.id, i) : handleCreatorMarkTile(page.id, i)}
                                                                         className={`
                                                                             relative w-full h-full transition-all duration-500 cursor-pointer
-                                                                            ${isRevealed ? 'bg-transparent border-2 border-white/60 border-dashed hover:bg-white/10' : `opacity-100 ${bgClass} border border-white/20`} 
+                                                                            ${isRevealed ? 'bg-transparent border border-red-500/60 border-dashed hover:bg-red-500/20' : `opacity-100 ${bgClass} border border-white/20`} 
                                                                         `}
                                                                     >
                                                                         {/* Play Mode Number or X */}
@@ -758,7 +758,18 @@
 
                 const revealAll = () => setRevealedTiles(prev => ({ ...prev, [activePageIndex]: Array.from({ length: totalTiles }, (_, i) => i) }));
                 const resetPage = () => setRevealedTiles(prev => { const n = {...prev}; delete n[activePageIndex]; return n; });
-                const nextSlide = () => activePageIndex < newGamePages.length - 1 && setActivePageIndex(prev => prev + 1);
+                
+                const nextSlide = () => {
+                    if (activePageIndex < newGamePages.length - 1) {
+                        // Reset the next box's state to ensure it starts wrapped
+                        setRevealedTiles(prev => {
+                            const newState = { ...prev };
+                            delete newState[activePageIndex + 1];
+                            return newState;
+                        });
+                        setActivePageIndex(prev => prev + 1);
+                    }
+                };
                 const prevSlide = () => activePageIndex > 0 && setActivePageIndex(prev => prev - 1);
 
                 return (
@@ -796,6 +807,12 @@
 
                             <div className="absolute inset-0 overflow-hidden rounded-[1.2rem]">
                                 <img src={currentPage.image} alt="Secret" className="absolute inset-0 w-full h-full object-contain z-0" />
+                                
+                                {/* Black Cover to prevent flashing and hide until played */}
+                                {currentRevealed.length === 0 && (
+                                    <div className="absolute inset-0 bg-black z-0" />
+                                )}
+
                                 <div className="absolute inset-0 grid z-10" style={{ gridTemplateColumns: `repeat(${currentPage.cols}, 1fr)`, gridTemplateRows: `repeat(${currentPage.rows}, 1fr)` }}>
                                     {Array.from({ length: totalTiles }).map((_, i) => {
                                         const isRevealed = currentRevealed.includes(i);

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Unbox!</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #0f3d24; /* Darker Green for contrast */
+            overflow-x: hidden;
+        }
+        h1, h2, h3, .festive-font {
+            font-family: 'Mountains of Christmas', cursive;
+        }
+        
+        /* Snow Animation */
+        .snowflake {
+            position: absolute;
+            top: -20px;
+            color: white;
+            pointer-events: none;
+            user-select: none;
+            animation: fall linear infinite;
+        }
+        
+        @keyframes fall {
+            0% { transform: translateY(-10vh) translateX(-10px) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.9; }
+            100% { transform: translateY(110vh) translateX(10px) rotate(360deg); opacity: 0.2; }
+        }
+
+        .animate-bounce-slow {
+            animation: bounce 2s infinite;
+        }
+        .animate-spin-slow {
+            animation: spin 4s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(22, 91, 51, 0.3);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(22, 91, 51, 0.5);
+        }
+        .pattern-candy-cane {
+            background: repeating-linear-gradient(
+                45deg,
+                #ef4444,
+                #ef4444 10px,
+                #ffffff 10px,
+                #ffffff 20px
+            );
+        }
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        christmas: {
+                            red: '#D42426',
+                            green: '#165B33',
+                            darkGreen: '#0f3d24',
+                            gold: '#F8B229',
+                            cream: '#F0F2E6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Icons (SVG Components) ---
+        const IconBase = ({ children, size = 20, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {children}
+            </svg>
+        );
+
+        const Icons = {
+            Camera: (props) => <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>,
+            Play: (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"/></IconBase>,
+            Plus: (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></IconBase>,
+            Trash2: (props) => <IconBase {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>,
+            Grid3X3: (props) => <IconBase {...props}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></IconBase>,
+            Home: (props) => <IconBase {...props}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></IconBase>,
+            ArrowLeft: (props) => <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></IconBase>,
+            ArrowRight: (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconBase>,
+            ArrowUp: (props) => <IconBase {...props}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></IconBase>,
+            ArrowDown: (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></IconBase>,
+            Settings: (props) => <IconBase {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></IconBase>,
+            Image: (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></IconBase>,
+            Check: (props) => <IconBase {...props}><polyline points="20 6 9 17 4 12"/></IconBase>,
+            X: (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>,
+            Maximize2: (props) => <IconBase {...props}><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></IconBase>,
+            Crop: (props) => <IconBase {...props}><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></IconBase>,
+            Gift: (props) => <IconBase {...props}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></IconBase>,
+            Download: (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconBase>,
+            Snowflake: (props) => <IconBase {...props}><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/></IconBase>
+        };
+
+        // --- Shared Components ---
+
+        const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false, icon: Icon, title = '' }) => {
+            const baseStyles = "flex items-center justify-center px-4 py-2 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-sm";
+            const variants = {
+                primary: "bg-christmas-red text-white hover:bg-red-700 shadow-red-200 border border-red-700",
+                secondary: "bg-white text-christmas-green border-2 border-christmas-green hover:bg-green-50",
+                danger: "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100",
+                success: "bg-christmas-green text-white hover:bg-green-700 shadow-green-200 border border-green-800",
+                ghost: "bg-transparent text-gray-600 hover:bg-gray-100 shadow-none",
+                gold: "bg-christmas-gold text-white hover:bg-yellow-500 shadow-yellow-200 text-shadow",
+                icon: "p-2 bg-white text-gray-600 hover:bg-red-50 hover:text-christmas-red border border-gray-200 shadow-sm",
+            };
+
+            return (
+                <button 
+                onClick={onClick} 
+                disabled={disabled}
+                title={title}
+                className={`${baseStyles} ${variants[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+                >
+                {Icon && <Icon size={20} className={children ? "mr-2" : ""} />}
+                {children}
+                </button>
+            );
+        };
+
+        const Card = ({ children, className = '' }) => (
+            <div className={`bg-white rounded-2xl shadow-xl border-2 border-christmas-gold/30 overflow-hidden ${className}`}>
+                {children}
+            </div>
+        );
+
+        // --- Grid Selector ---
+        const GridSelector = ({ currentRows, currentCols, onSelect, onClose }) => {
+            const [hover, setHover] = useState({ r: 0, c: 0 });
+            const maxGrid = 6; 
+
+            return (
+                <div className="absolute bottom-12 right-0 z-50 bg-white p-3 rounded-xl shadow-2xl border-2 border-christmas-green animate-in fade-in zoom-in duration-200 origin-bottom-right">
+                <div className="mb-2 text-center text-xs font-bold text-gray-500 festive-font text-lg">
+                    Grid: {(hover.r || currentRows)} x {(hover.c || currentCols)}
+                </div>
+                <div 
+                    className="grid gap-1" 
+                    style={{ gridTemplateColumns: `repeat(${maxGrid}, 1fr)` }}
+                    onMouseLeave={() => setHover({ r: 0, c: 0 })}
+                >
+                    {Array.from({ length: maxGrid * maxGrid }).map((_, i) => {
+                    const r = Math.floor(i / maxGrid) + 1;
+                    const c = (i % maxGrid) + 1;
+                    const isActive = r <= (hover.r || currentRows) && c <= (hover.c || currentCols);
+                    
+                    return (
+                        <button
+                        key={i}
+                        className={`w-5 h-5 rounded-sm border transition-colors ${
+                            isActive 
+                            ? 'bg-christmas-red border-red-700' 
+                            : 'bg-gray-50 border-gray-200 hover:bg-red-100'
+                        }`}
+                        onMouseEnter={() => setHover({ r, c })}
+                        onClick={() => {
+                            onSelect(r, c);
+                            onClose();
+                        }}
+                        />
+                    );
+                    })}
+                </div>
+                </div>
+            );
+        };
+
+        // --- Snow System ---
+        const SnowSystem = ({ active, density = 50 }) => {
+            if (!active) return null;
+            
+            const snowChars = ['❅', '❆', '❄︎'];
+
+            const flakes = useMemo(() => Array.from({ length: density }).map((_, i) => {
+                const isCircle = Math.random() < 0.7; // 70% Circle
+                return {
+                    id: i,
+                    left: Math.random() * 100 + '%',
+                    animationDuration: (5 + Math.random() * 15) + 's',
+                    animationDelay: -(Math.random() * 10) + 's',
+                    opacity: 0.2 + Math.random() * 0.8,
+                    size: isCircle ? (4 + Math.random() * 6) + 'px' : (12 + Math.random() * 20) + 'px',
+                    isCircle: isCircle,
+                    char: !isCircle ? snowChars[Math.floor(Math.random() * snowChars.length)] : null
+                };
+            }), [density]);
+
+            return (
+                <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                    {flakes.map((f) => (
+                        <div 
+                            key={f.id} 
+                            className="snowflake"
+                            style={{
+                                left: f.left,
+                                width: f.isCircle ? f.size : 'auto',
+                                height: f.isCircle ? f.size : 'auto',
+                                fontSize: f.isCircle ? '0' : f.size,
+                                background: f.isCircle ? 'white' : 'transparent',
+                                borderRadius: f.isCircle ? '50%' : '0',
+                                animationDuration: f.animationDuration,
+                                animationDelay: f.animationDelay,
+                                opacity: f.opacity,
+                                textShadow: f.isCircle ? 'none' : '0 0 3px rgba(255,255,255,0.8)',
+                                boxShadow: f.isCircle ? '0 0 4px rgba(255,255,255,0.8)' : 'none'
+                            }}
+                        >
+                            {!f.isCircle && f.char}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const BoxSnowLayer = () => {
+             const snowChars = ['❅', '❆', '❄︎'];
+             const flakes = useMemo(() => Array.from({ length: 15 }).map((_, i) => {
+                const isCircle = Math.random() < 0.7; // 70% Circle
+                return {
+                    id: i,
+                    left: Math.random() * 100 + '%',
+                    animationDuration: (3 + Math.random() * 5) + 's',
+                    animationDelay: -(Math.random() * 5) + 's',
+                    opacity: 0.4 + Math.random() * 0.8,
+                    size: isCircle ? (4 + Math.random() * 6) + 'px' : (16 + Math.random() * 16) + 'px',
+                    isCircle: isCircle,
+                    char: !isCircle ? snowChars[Math.floor(Math.random() * snowChars.length)] : null
+                };
+            }), []);
+            
+            return (
+                 <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden rounded-3xl">
+                    {flakes.map((f) => (
+                        <div 
+                            key={f.id} 
+                            className="snowflake"
+                            style={{
+                                left: f.left,
+                                width: f.isCircle ? f.size : 'auto',
+                                height: f.isCircle ? f.size : 'auto',
+                                fontSize: f.isCircle ? '0' : f.size,
+                                background: f.isCircle ? 'white' : 'transparent',
+                                borderRadius: f.isCircle ? '50%' : '0',
+                                animationDuration: f.animationDuration,
+                                animationDelay: f.animationDelay,
+                                opacity: f.opacity,
+                                textShadow: f.isCircle ? 'none' : '0 0 3px rgba(255,255,255,0.8)',
+                                boxShadow: f.isCircle ? '0 0 4px rgba(255,255,255,0.8)' : 'none'
+                            }}
+                        >
+                             {!f.isCircle && f.char}
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+
+
+        // --- Image Cropper ---
+        const ImageCropper = ({ imageSrc, onCrop, onCancel }) => {
+            const [crop, setCrop] = useState({ x: 10, y: 10, w: 80, h: 80 });
+            const [dragAction, setDragAction] = useState(null); 
+            const containerRef = useRef(null);
+            const imageRef = useRef(null);
+
+            const getClientPos = (e) => ({
+                x: e.touches ? e.touches[0].clientX : e.clientX,
+                y: e.touches ? e.touches[0].clientY : e.clientY
+            });
+
+            const handleStart = (e, type) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const { x, y } = getClientPos(e);
+                setDragAction({ type, startX: x, startY: y, startCrop: { ...crop } });
+            };
+
+            const handleMove = (e) => {
+                if (!dragAction || !containerRef.current) return;
+                e.preventDefault();
+                const { x: clientX, y: clientY } = getClientPos(e);
+                const { width, height } = containerRef.current.getBoundingClientRect();
+                const deltaX = ((clientX - dragAction.startX) / width) * 100;
+                const deltaY = ((clientY - dragAction.startY) / height) * 100;
+                
+                let newCrop = { ...dragAction.startCrop };
+                const minSize = 10; 
+
+                if (dragAction.type === 'move') {
+                    newCrop.x += deltaX; newCrop.y += deltaY;
+                    newCrop.x = Math.max(0, Math.min(100 - newCrop.w, newCrop.x));
+                    newCrop.y = Math.max(0, Math.min(100 - newCrop.h, newCrop.y));
+                } else {
+                    const { type } = dragAction;
+                    if (type.includes('e')) newCrop.w += deltaX;
+                    if (type.includes('s')) newCrop.h += deltaY;
+                    if (type.includes('w')) { newCrop.x += deltaX; newCrop.w -= deltaX; }
+                    if (type.includes('n')) { newCrop.y += deltaY; newCrop.h -= deltaY; }
+
+                    if (newCrop.w < minSize) {
+                        if (type.includes('w')) newCrop.x = dragAction.startCrop.x + dragAction.startCrop.w - minSize;
+                        newCrop.w = minSize;
+                    }
+                    if (newCrop.h < minSize) {
+                        if (type.includes('n')) newCrop.y = dragAction.startCrop.y + dragAction.startCrop.h - minSize;
+                        newCrop.h = minSize;
+                    }
+                    if (newCrop.x < 0) { newCrop.w += newCrop.x; newCrop.x = 0; }
+                    if (newCrop.y < 0) { newCrop.h += newCrop.y; newCrop.y = 0; }
+                    if (newCrop.x + newCrop.w > 100) newCrop.w = 100 - newCrop.x;
+                    if (newCrop.y + newCrop.h > 100) newCrop.h = 100 - newCrop.y;
+                }
+                setCrop(newCrop);
+            };
+
+            const handleEnd = () => setDragAction(null);
+
+            const applyCrop = () => {
+                const canvas = document.createElement('canvas');
+                const img = imageRef.current;
+                const naturalWidth = img.naturalWidth;
+                const naturalHeight = img.naturalHeight;
+                canvas.width = (crop.w / 100) * naturalWidth;
+                canvas.height = (crop.h / 100) * naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, (crop.x / 100) * naturalWidth, (crop.y / 100) * naturalHeight, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+                onCrop(canvas.toDataURL());
+            };
+
+            const Handle = ({ pos, cursor }) => (
+                <div
+                    className={`absolute w-4 h-4 bg-christmas-gold border-2 border-white rounded-full shadow-md z-20 ${cursor}`}
+                    style={{
+                        top: pos.includes('n') ? '-8px' : pos.includes('s') ? 'calc(100% - 8px)' : 'calc(50% - 8px)',
+                        left: pos.includes('w') ? '-8px' : pos.includes('e') ? 'calc(100% - 8px)' : 'calc(50% - 8px)',
+                    }}
+                    onMouseDown={(e) => handleStart(e, pos)}
+                    onTouchStart={(e) => handleStart(e, pos)}
+                />
+            );
+
+            return (
+                <div 
+                    className="fixed inset-0 z-50 bg-christmas-green/90 flex flex-col p-4 animate-in fade-in duration-200"
+                    onMouseMove={handleMove} onTouchMove={handleMove}
+                    onMouseUp={handleEnd} onTouchEnd={handleEnd} onMouseLeave={handleEnd}
+                >
+                    <div className="flex justify-between items-center text-white mb-4 max-w-4xl mx-auto w-full">
+                        <h3 className="text-3xl font-bold festive-font text-christmas-gold">Trim the Photo</h3>
+                        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded-full transition-colors"><Icons.X /></button>
+                    </div>
+
+                    <div className="flex-1 flex items-center justify-center overflow-hidden">
+                        <div className="relative inline-block shadow-2xl border-4 border-white rounded-lg" ref={containerRef}>
+                            <img ref={imageRef} src={imageSrc} alt="Crop target" className="max-h-[70vh] max-w-full block select-none" draggable="false" />
+                            <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+                            <div 
+                                className="absolute border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move"
+                                style={{ left: `${crop.x}%`, top: `${crop.y}%`, width: `${crop.w}%`, height: `${crop.h}%` }}
+                                onMouseDown={(e) => handleStart(e, 'move')}
+                                onTouchStart={(e) => handleStart(e, 'move')}
+                            >
+                                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-40">
+                                    {[...Array(9)].map((_, i) => <div key={i} className="border border-white/50" />)}
+                                </div>
+                                {['nw','ne','sw','se','n','s','e','w'].map(p => <Handle key={p} pos={p} cursor={`cursor-${p}-resize`} />)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-4xl mx-auto w-full mt-4 flex justify-end gap-3">
+                        <Button onClick={onCancel} variant="ghost" className="text-white hover:text-white hover:bg-white/10">Cancel</Button>
+                        <Button onClick={applyCrop} variant="gold" icon={Icons.Check} className="text-christmas-red">Apply</Button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App ---
+        function App() {
+            const [view, setView] = useState('menu'); // menu, create, play
+            const [activePageIndex, setActivePageIndex] = useState(0);
+            
+            // Creation State
+            const [newGameTitle, setNewGameTitle] = useState('Christmas Unbox!');
+            const [newGamePages, setNewGamePages] = useState([]);
+            const [globalGridSize, setGlobalGridSize] = useState(3);
+            const [isProcessing, setIsProcessing] = useState(false);
+            
+            // Feature States
+            const [editingImageIndex, setEditingImageIndex] = useState(null); 
+            const [openGridSelector, setOpenGridSelector] = useState(null); 
+            const [creatorRevealedTiles, setCreatorRevealedTiles] = useState({});
+            const [isSnowing, setIsSnowing] = useState(true);
+
+            // Gameplay State
+            const [revealedTiles, setRevealedTiles] = useState({});
+
+            const handleImageUpload = async (e) => {
+                if (!e.target.files.length) return;
+                setIsProcessing(true);
+                const files = Array.from(e.target.files);
+                const processedPages = await Promise.all(files.map(file => {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const id = Math.random().toString(36).substr(2, 9);
+                            resolve({ id, image: reader.result, rows: globalGridSize, cols: globalGridSize, victoryMessage: "Ho! Ho! Ho!", markedTiles: [] });
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }));
+                const newPages = [...newGamePages, ...processedPages];
+                setNewGamePages(newPages);
+                // Default to revealed in creator
+                const newRevealed = {...creatorRevealedTiles};
+                processedPages.forEach(p => {
+                    newRevealed[p.id] = Array.from({ length: p.rows * p.cols }, (_, i) => i);
+                });
+                setCreatorRevealedTiles(newRevealed);
+                setIsProcessing(false);
+                e.target.value = '';
+            };
+
+            const updatePageGrid = (index, rows, cols) => {
+                const updated = [...newGamePages];
+                updated[index].rows = rows;
+                updated[index].cols = cols;
+                updated[index].markedTiles = []; // Reset marks on grid change
+                setNewGamePages(updated);
+                // Reset to revealed
+                const id = updated[index].id;
+                setCreatorRevealedTiles(prev => ({ ...prev, [id]: Array.from({ length: rows * cols }, (_, i) => i) }));
+            };
+
+            const updatePageVictoryMessage = (index, message) => {
+                const updated = [...newGamePages];
+                updated[index].victoryMessage = message;
+                setNewGamePages(updated);
+            };
+
+            const handleCreatorMarkTile = (pageId, tileIndex) => {
+                setNewGamePages(prev => prev.map(page => {
+                    if (page.id !== pageId) return page;
+                    const marked = page.markedTiles || [];
+                    const newMarked = marked.includes(tileIndex) 
+                        ? marked.filter(i => i !== tileIndex)
+                        : [...marked, tileIndex];
+                    return { ...page, markedTiles: newMarked };
+                }));
+            };
+
+            const removePage = (index) => setNewGamePages(prev => prev.filter((_, i) => i !== index));
+            
+            const movePage = (index, direction) => {
+                if ((direction === -1 && index === 0) || (direction === 1 && index === newGamePages.length - 1)) return;
+                const updated = [...newGamePages];
+                const temp = updated[index];
+                updated[index] = updated[index + direction];
+                updated[index + direction] = temp;
+                setNewGamePages(updated);
+            };
+
+            const handleCropComplete = (newImageSrc) => {
+                if (editingImageIndex !== null) {
+                    const updated = [...newGamePages];
+                    updated[editingImageIndex].image = newImageSrc;
+                    setNewGamePages(updated);
+                    setEditingImageIndex(null);
+                }
+            };
+
+            const toggleCreatorPreview = (pageId, totalTiles) => {
+                setCreatorRevealedTiles(prev => {
+                    const current = prev[pageId] || [];
+                    return (current.length === totalTiles) ? { ...prev, [pageId]: [] } : { ...prev, [pageId]: Array.from({ length: totalTiles }, (_, i) => i) };
+                });
+            };
+
+            const handleCreatorTileClick = (pageId, tileIndex) => {
+                setCreatorRevealedTiles(prev => {
+                    const current = prev[pageId] || [];
+                    if (!current.includes(tileIndex)) return { ...prev, [pageId]: [...current, tileIndex] };
+                    return prev;
+                });
+            };
+
+            const startPlaying = () => {
+                if (newGamePages.length === 0) {
+                    alert("Please add at least one photo!");
+                    return;
+                }
+                setRevealedTiles({});
+                setActivePageIndex(0);
+                setView('play');
+            };
+
+            // --- Render Views ---
+
+            const renderMenu = () => (
+                <div className={`flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-christmas-green to-christmas-green/80 p-6 relative overflow-hidden`}>
+                     <SnowSystem active={isSnowing} density={60} />
+                    <div className="bg-white/95 backdrop-blur-sm p-12 rounded-[3rem] shadow-2xl max-w-lg w-full text-center space-y-8 border-4 border-christmas-gold z-10">
+                        <div className="space-y-4">
+                            <div className="flex justify-center mb-6">
+                                <div className="bg-red-50 p-6 rounded-full border-4 border-christmas-red animate-bounce-slow">
+                                    <Icons.Gift size={64} className="text-christmas-red" />
+                                </div>
+                            </div>
+                            <h1 className="text-6xl font-extrabold text-christmas-red tracking-tight festive-font">Christmas Unbox!</h1>
+                            <h2 className="text-3xl text-christmas-green font-bold festive-font">by Wichku</h2>
+                        </div>
+                        <Button 
+                            onClick={() => setView('create')} 
+                            className="w-full py-6 text-2xl festive-font shadow-xl hover:scale-105 transition-transform" 
+                            icon={Icons.Play}
+                            variant="primary"
+                        >
+                            Start Decorating
+                        </Button>
+                        <div className="flex justify-center gap-4 text-christmas-green/60 text-4xl">
+                            <span className="animate-spin-slow">❄︎</span>
+                            <span className="animate-spin-slow">❅</span>
+                            <span className="animate-spin-slow">❆</span>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderCreator = () => (
+                <div className={`min-h-screen bg-christmas-cream/50 p-4 md:p-8`}>
+                    <SnowSystem active={isSnowing} density={40} />
+                    {editingImageIndex !== null && (
+                        <ImageCropper 
+                            imageSrc={newGamePages[editingImageIndex].image}
+                            onCrop={handleCropComplete}
+                            onCancel={() => setEditingImageIndex(null)}
+                        />
+                    )}
+
+                    <div className="max-w-[1400px] mx-auto space-y-6 relative z-10">
+                        {/* Header - Sticky */}
+                        <div className="sticky top-4 z-40 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/95 backdrop-blur-sm p-4 rounded-2xl shadow-lg border-2 border-christmas-gold">
+                            <div className="flex items-center gap-4">
+                                <Button onClick={() => setView('menu')} variant="secondary" icon={Icons.Gift} />
+                                <h2 className="text-3xl font-bold text-christmas-red festive-font">Santa's Workshop</h2>
+                            </div>
+                            <div className="flex gap-2 items-center flex-1 justify-end flex-wrap">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] uppercase font-bold text-christmas-green pl-1">Title</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Game Title..."
+                                        className="px-3 py-1 border-2 border-christmas-green/20 rounded-lg focus:border-christmas-green focus:outline-none w-full md:w-48 text-sm font-bold text-gray-700"
+                                        value={newGameTitle}
+                                        onChange={(e) => setNewGameTitle(e.target.value)}
+                                    />
+                                </div>
+                                <label className="flex items-center justify-center px-4 py-2 rounded-xl font-bold bg-christmas-red text-white hover:bg-red-700 shadow-sm border border-red-700 cursor-pointer mt-auto h-[42px]">
+                                    <Icons.Camera size={20} className="mr-2" /> Upload
+                                    <input type="file" className="hidden" multiple accept="image/*" onChange={handleImageUpload} />
+                                </label>
+                                <Button onClick={startPlaying} variant="gold" icon={Icons.Play} className="text-christmas-red text-lg px-6 mt-auto h-[42px]">Play</Button>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-6 items-start">
+                            {/* Left Sidebar - Reorder */}
+                            {newGamePages.length > 0 && (
+                                <div className="w-24 bg-white rounded-2xl shadow-lg border-2 border-christmas-gold/30 p-2 flex flex-col gap-2 max-h-[80vh] overflow-y-auto custom-scrollbar sticky top-28">
+                                    {newGamePages.map((page, idx) => (
+                                        <div key={page.id} className="relative flex flex-col items-center gap-1 p-1 rounded-lg border border-gray-100 hover:bg-gray-50">
+                                            <div className="flex flex-col gap-1 absolute -left-2 top-1/2 -translate-y-1/2 z-10">
+                                                 <button onClick={() => movePage(idx, -1)} disabled={idx === 0} className="p-1 bg-white rounded-full shadow border hover:text-christmas-green disabled:opacity-20"><Icons.ArrowUp size={10} /></button>
+                                                 <button onClick={() => movePage(idx, 1)} disabled={idx === newGamePages.length - 1} className="p-1 bg-white rounded-full shadow border hover:text-christmas-green disabled:opacity-20"><Icons.ArrowDown size={10} /></button>
+                                            </div>
+                                            <img src={page.image} className="w-16 h-16 rounded-lg object-cover bg-gray-200 border border-gray-200" alt={`Box ${idx + 1}`} />
+                                            <span className="text-[10px] font-bold text-gray-500">Box {idx + 1}</span>
+                                            <button onClick={() => removePage(idx)} className="absolute -top-1 -right-1 bg-red-100 text-red-500 rounded-full p-1 hover:bg-red-500 hover:text-white transition-colors"><Icons.Trash2 size={10} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Main Preview Area */}
+                            <div className="flex-1">
+                                {newGamePages.length === 0 ? (
+                                    <div className="h-96 flex flex-col items-center justify-center text-christmas-green/40 bg-white rounded-2xl border-4 border-dashed border-christmas-green/20">
+                                        <div className="text-6xl mb-4 opacity-50 animate-spin-slow text-christmas-green/40">❆</div>
+                                        <p className="festive-font text-2xl">Upload photos to unwrap!</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {newGamePages.map((page, idx) => {
+                                            const totalTiles = page.rows * page.cols;
+                                            const revealed = creatorRevealedTiles[page.id] || [];
+                                            const isPlayMode = revealed.length < totalTiles;
+                                            return (
+                                                <Card key={page.id} className="relative group">
+                                                    <div className="absolute top-2 right-2 z-20 flex gap-2">
+                                                        <button 
+                                                            onClick={() => toggleCreatorPreview(page.id, totalTiles)}
+                                                            className={`p-2 rounded-full shadow-lg transition-transform hover:scale-105 border-2 ${isPlayMode ? 'bg-christmas-red text-white border-white' : 'bg-white text-christmas-green border-christmas-green'}`}
+                                                            title={isPlayMode ? "Reset View" : "Test Play"}
+                                                        >
+                                                            <Icons.Gift size={16} />
+                                                        </button>
+                                                        <button onClick={() => setEditingImageIndex(idx)} className="bg-white hover:bg-gray-50 text-gray-700 p-2 rounded-full shadow-lg transition-transform hover:scale-105 border-2 border-gray-100"><Icons.Crop size={16} /></button>
+                                                    </div>
+                                                    
+                                                    <div className="relative aspect-video bg-gray-900 pattern-candy-cane">
+                                                        <img src={page.image} className="w-full h-full object-contain relative z-0" alt="Preview" />
+                                                        <div 
+                                                            className="absolute inset-0 grid z-10"
+                                                            style={{ gridTemplateColumns: `repeat(${page.cols}, 1fr)`, gridTemplateRows: `repeat(${page.rows}, 1fr)` }}
+                                                        >
+                                                            {Array.from({ length: totalTiles }).map((_, i) => {
+                                                                const isRevealed = revealed.includes(i);
+                                                                const isMarked = (page.markedTiles || []).includes(i);
+                                                                const isEven = (Math.floor(i / page.cols) + (i % page.cols)) % 2 === 0;
+                                                                const bgClass = isEven ? 'bg-christmas-red' : 'bg-christmas-green';
+                                                                return (
+                                                                    <div
+                                                                        key={i}
+                                                                        onClick={() => isPlayMode ? handleCreatorTileClick(page.id, i) : handleCreatorMarkTile(page.id, i)}
+                                                                        className={`
+                                                                            relative w-full h-full transition-all duration-500 cursor-pointer
+                                                                            ${isRevealed ? 'bg-transparent border-2 border-white/60 border-dashed hover:bg-white/10' : `opacity-100 ${bgClass} border border-white/20`} 
+                                                                        `}
+                                                                    >
+                                                                        {/* Play Mode Number or X */}
+                                                                        {!isRevealed && isPlayMode && (
+                                                                            <div className="absolute inset-0 flex items-center justify-center text-white/50 font-bold text-xl select-none">
+                                                                                {isMarked ? "X" : (i + 1)}
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        {/* Unwrap Mode Mark Indicator */}
+                                                                        {isRevealed && !isPlayMode && isMarked && (
+                                                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                                                <span className="text-red-600 font-extrabold text-4xl drop-shadow-[0_2px_2px_rgba(255,255,255,0.8)]">X</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-3 bg-red-50 border-t-2 border-christmas-gold/20 flex flex-col gap-2 relative z-20">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm font-bold text-christmas-red festive-font text-lg">Box {idx + 1}</span>
+                                                            <div className="relative flex items-center gap-2">
+                                                                <Button variant="icon" className="h-8 px-2 text-xs flex gap-2 text-christmas-green" onClick={() => setOpenGridSelector(openGridSelector === idx ? null : idx)}>
+                                                                    <Icons.Grid3X3 size={14} /> {page.rows} x {page.cols}
+                                                                </Button>
+                                                                {openGridSelector === idx && <GridSelector currentRows={page.rows} currentCols={page.cols} onSelect={(r, c) => updatePageGrid(idx, r, c)} onClose={() => setOpenGridSelector(null)} />}
+                                                                
+                                                                <button 
+                                                                    onClick={() => removePage(idx)} 
+                                                                    className="h-8 w-8 flex items-center justify-center bg-white border border-gray-200 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors shadow-sm"
+                                                                    title="Remove Box"
+                                                                >
+                                                                    <Icons.Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] uppercase font-bold text-christmas-green">Popup Word:</span>
+                                                            <input
+                                                                type="text"
+                                                                className="flex-1 px-2 py-1 text-xs border border-christmas-green/20 rounded focus:border-christmas-green focus:outline-none"
+                                                                value={page.victoryMessage || "Ho! Ho! Ho!"}
+                                                                onChange={(e) => updatePageVictoryMessage(idx, e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderGamePlayer = () => {
+                const currentPage = newGamePages[activePageIndex];
+                const totalTiles = currentPage.rows * currentPage.cols;
+                const currentRevealed = revealedTiles[activePageIndex] || [];
+                const isFullyRevealed = currentRevealed.length === totalTiles;
+                const isLastPage = activePageIndex === newGamePages.length - 1;
+
+                const handleTileClick = (index) => {
+                    setRevealedTiles(prev => {
+                        const pageRevealed = prev[activePageIndex] || [];
+                        return pageRevealed.includes(index) ? prev : { ...prev, [activePageIndex]: [...pageRevealed, index] };
+                    });
+                };
+
+                const revealAll = () => setRevealedTiles(prev => ({ ...prev, [activePageIndex]: Array.from({ length: totalTiles }, (_, i) => i) }));
+                const resetPage = () => setRevealedTiles(prev => { const n = {...prev}; delete n[activePageIndex]; return n; });
+                const nextSlide = () => activePageIndex < newGamePages.length - 1 && setActivePageIndex(prev => prev + 1);
+                const prevSlide = () => activePageIndex > 0 && setActivePageIndex(prev => prev - 1);
+
+                return (
+                    <div className={`min-h-screen bg-christmas-green flex flex-col items-center justify-center p-4 relative overflow-hidden`}>
+                        <SnowSystem active={isSnowing} density={60} />
+                        
+                        <div className="w-full max-w-5xl flex justify-between items-center mb-6 text-white relative z-10 px-4">
+                            {/* Top Left: Home & Snow */}
+                            <div className="w-40 flex justify-start gap-2">
+                                 <Button onClick={() => setView('create')} variant="secondary" icon={Icons.Home} className="px-3 py-2 text-lg"></Button>
+                                 <button onClick={() => setIsSnowing(!isSnowing)} className="w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors text-2xl" title="Toggle Snow">
+                                    ❆
+                                 </button>
+                            </div>
+
+                            {/* Center: Title */}
+                            <div className="text-center flex-1">
+                                <h2 className="text-5xl font-bold festive-font text-christmas-gold text-shadow leading-tight">{newGameTitle}</h2>
+                            </div>
+
+                            {/* Top Right: Unwrap/Wrap */}
+                            <div className="w-40 flex justify-end">
+                                {isFullyRevealed ? (
+                                    <Button onClick={resetPage} variant="secondary" className="bg-white text-christmas-green font-bold shadow-lg border-none text-sm px-6 py-2" icon={Icons.Grid3X3}>Wrap</Button>
+                                ) : (
+                                    <Button onClick={revealAll} variant="gold" className="text-christmas-red font-bold text-sm shadow-lg border-2 border-white px-6 py-2" icon={Icons.Maximize2}>Unwrap</Button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="relative w-full max-w-5xl aspect-video bg-black rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-8 border-christmas-gold mt-2 z-10">
+                            
+                            {/* Inner Box Snow */}
+                            {isSnowing && <BoxSnowLayer />}
+
+                            <div className="absolute inset-0 overflow-hidden rounded-[1.2rem]">
+                                <img src={currentPage.image} alt="Secret" className="absolute inset-0 w-full h-full object-contain z-0" />
+                                <div className="absolute inset-0 grid z-10" style={{ gridTemplateColumns: `repeat(${currentPage.cols}, 1fr)`, gridTemplateRows: `repeat(${currentPage.rows}, 1fr)` }}>
+                                    {Array.from({ length: totalTiles }).map((_, i) => {
+                                        const isRevealed = currentRevealed.includes(i);
+                                        const isMarked = (currentPage.markedTiles || []).includes(i);
+                                        const isEven = (Math.floor(i / currentPage.cols) + (i % currentPage.cols)) % 2 === 0;
+                                        const bgClass = isEven ? 'bg-christmas-red' : 'bg-christmas-green';
+                                        return (
+                                            <button
+                                                key={i}
+                                                onClick={() => handleTileClick(i)}
+                                                className={`
+                                                    relative w-full h-full transition-all duration-700 transform group
+                                                    ${isRevealed ? 'opacity-0 scale-50 rotate-180 pointer-events-none' : `opacity-100 cursor-pointer ${bgClass}`}
+                                                `}
+                                                style={{ border: '2px solid rgba(255,255,255,0.2)' }}
+                                            >
+                                                {!isRevealed && (
+                                                    <div className="absolute inset-0 flex items-center justify-center text-white/50 font-bold text-6xl select-none transition-transform group-hover:scale-125 group-hover:text-white text-shadow">
+                                                        {isMarked ? "X" : (i + 1)}
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {isFullyRevealed && (
+                                <div className="absolute top-4 right-4 z-50 animate-bounce">
+                                    <span className="bg-christmas-gold text-christmas-red px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 text-xl festive-font border-2 border-white">
+                                        <Icons.Check size={24} /> {currentPage.victoryMessage || "Ho! Ho! Ho!"}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="w-full max-w-5xl mt-6 relative z-10">
+                             {/* Bottom Controls */}
+                             <div className="grid grid-cols-3 gap-4 items-center">
+                                <div className="flex justify-start">
+                                    <Button onClick={prevSlide} disabled={activePageIndex === 0} variant="secondary" className="bg-white/10 text-white border-white/50 hover:bg-white/20" icon={Icons.ArrowLeft}>Prev</Button>
+                                </div>
+                                
+                                <div className="flex justify-center">
+                                     <p className="text-sm text-white/80 font-bold bg-black/20 px-3 py-1 rounded-full">Box {activePageIndex + 1} of {newGamePages.length}</p>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <Button 
+                                        onClick={isLastPage ? () => setView('menu') : nextSlide} 
+                                        variant="secondary" 
+                                        className="bg-white/10 text-white border-white/50 hover:bg-white/20"
+                                    >
+                                        {isLastPage ? (
+                                            <>End</>
+                                        ) : (
+                                            <>Next <Icons.ArrowRight size={20} className="ml-2" /></>
+                                        )}
+                                    </Button>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="font-sans text-gray-800">
+                    {view === 'menu' && renderMenu()}
+                    {view === 'create' && renderCreator()}
+                    {view === 'play' && renderGamePlayer()}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
